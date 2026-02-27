@@ -1,8 +1,27 @@
 [package]
 name = "webui-rs"
 version = "0.1.0"
-build = "build.rs"
 edition = "2021"
+description = "Safe Rust bindings for the WebUI C library"
+license = "MIT"
+repository = "https://github.com/webui-dev/rust-webui"
+keywords = ["webui", "gui", "browser", "ffi", "html"]
+categories = ["gui", "web-programming", "api-bindings"]
+
+[features]
+default = []
+# Link against the TLS-enabled variant of the library (webui-2-secure-static)
+tls = []
 
 [dependencies]
-lazy_static = "1.4.0"
+# No runtime dependencies — we bind directly to the C library.
+
+[dev-dependencies]
+# nothing needed yet
+
+[build-dependencies]
+# nothing — build.rs uses only std
+
+[lib]
+name = "webui_rs"
+crate-type = ["rlib"]

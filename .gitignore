@@ -4,3 +4,4 @@ target
 *.dll
 *.so
 *.dylib
+.vscode

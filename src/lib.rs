@@ -1,18 +1,241 @@
-pub mod webui;
+// lib.rs
+// webui-rs — safe Rust bindings for the WebUI C library (v2.5.0-beta.4+)
+//
+// Crate layout:
+//   ffi.rs       — raw `extern "C"` block; mirrors webui.h 1:1
+//   types.rs     — Rust enums (Browser, Runtime, EventType, Config, LoggerLevel)
+//   event.rs     — safe `Event` wrapper used inside callbacks
+//   window.rs    — safe `Window` wrapper (the main user-facing type)
+//   callbacks.rs — global closure registry + C trampoline
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+mod callbacks;
+mod event;
+mod ffi;
+mod types;
+mod window;
 
-    #[test]
-    fn test_webui_window() {
-        let win = webui::Window::new();
-        assert_eq!(win.id, 1);
-        win.show("<span>Hello World</span>");
+// ---------------------------------------------------------------------------
+// Public API surface
+// ---------------------------------------------------------------------------
 
-        // Wait 2 seconds, then kill
-        std::thread::sleep(std::time::Duration::from_secs(2));
+pub use event::Event;
+pub use types::{Browser, Config, EventType, LoggerLevel, Runtime, ScriptError};
+pub use window::Window;
 
-        win.destroy();
+use std::ffi::{c_void, CStr, CString};
+
+// ---------------------------------------------------------------------------
+// Global / free functions
+// ---------------------------------------------------------------------------
+
+/// Block until all open windows are closed.
+///
+/// This is the typical last call in `main()` before cleanup.
+pub fn wait() {
+    unsafe { ffi::webui_wait() }
+}
+
+/// Async variant of `wait()`.
+///
+/// Returns `true` if there are still open windows, `false` when all have closed.
+/// Useful when you need to run code on the main thread alongside the event loop:
+///
+/// ```no_run
+/// while webui_rs::wait_async() {
+///     // do work on the main thread here
+/// }
+/// ```
+pub fn wait_async() -> bool {
+    unsafe { ffi::webui_wait_async() }
+}
+
+/// Close all open windows. [`wait()`] will return after this.
+pub fn exit() {
+    unsafe { ffi::webui_exit() }
+}
+
+/// Free all WebUI memory resources.
+/// Call this after [`wait()`] at the very end of your program.
+pub fn clean() {
+    unsafe { ffi::webui_clean() }
+}
+
+/// Delete **all** local browser profile folders.
+/// Call after [`wait()`] and before [`clean()`].
+pub fn delete_all_profiles() {
+    unsafe { ffi::webui_delete_all_profiles() }
+}
+
+// ---------------------------------------------------------------------------
+// Global configuration
+// ---------------------------------------------------------------------------
+
+/// Control global WebUI behaviour.
+///
+/// Should be called before any call to `show()`.
+///
+/// ```no_run
+/// webui_rs::set_config(webui_rs::Config::ShowWaitConnection, false);
+/// ```
+pub fn set_config(option: Config, status: bool) {
+    unsafe { ffi::webui_set_config(option.into(), status) }
+}
+
+/// Set the maximum number of seconds to wait for a browser to connect.
+/// `0` means wait forever. Affects both `show()` and `wait()`.
+pub fn set_timeout(seconds: usize) {
+    unsafe { ffi::webui_set_timeout(seconds) }
+}
+
+/// Open a URL in the system's default web browser (outside of WebUI).
+pub fn open_url(url: &str) {
+    let cstr = CString::new(url).unwrap_or_default();
+    unsafe { ffi::webui_open_url(cstr.as_ptr()) }
+}
+
+/// Set the default web-server root folder for **all** windows.
+/// Call before any `show()`.
+pub fn set_default_root_folder(path: &str) -> bool {
+    let cstr = CString::new(path).unwrap_or_default();
+    unsafe { ffi::webui_set_default_root_folder(cstr.as_ptr()) }
+}
+
+/// Set the folder where WebUI looks for the browser executable.
+pub fn set_browser_folder(path: &str) {
+    let cstr = CString::new(path).unwrap_or_default();
+    unsafe { ffi::webui_set_browser_folder(cstr.as_ptr()) }
+}
+
+/// Check whether a specific browser is installed on this machine.
+pub fn browser_exist(browser: Browser) -> bool {
+    unsafe { ffi::webui_browser_exist(browser.into()) }
+}
+
+/// Returns `true` if the OS is using a high-contrast theme.
+pub fn is_high_contrast() -> bool {
+    unsafe { ffi::webui_is_high_contrast() }
+}
+
+/// Check whether the WebUI event loop is still running.
+pub fn is_app_running() -> bool {
+    unsafe { ffi::webui_interface_is_app_running() }
+}
+
+// ---------------------------------------------------------------------------
+// Network
+// ---------------------------------------------------------------------------
+
+/// Get an available free TCP port.
+pub fn get_free_port() -> usize {
+    unsafe { ffi::webui_get_free_port() }
+}
+
+// ---------------------------------------------------------------------------
+// Memory / encoding helpers
+// ---------------------------------------------------------------------------
+
+/// Base64-encode a string. The returned `String` is managed by Rust.
+///
+/// Internally calls `webui_encode` then copies the result, freeing the
+/// C-owned buffer.
+pub fn encode(s: &str) -> String {
+    let cstr = CString::new(s).unwrap_or_default();
+    unsafe {
+        let ptr = ffi::webui_encode(cstr.as_ptr());
+        if ptr.is_null() {
+            return String::new();
+        }
+        let result = CStr::from_ptr(ptr).to_string_lossy().into_owned();
+        ffi::webui_free(ptr as *mut c_void);
+        result
     }
+}
+
+/// Base64-decode a string. The returned `String` is managed by Rust.
+pub fn decode(s: &str) -> String {
+    let cstr = CString::new(s).unwrap_or_default();
+    unsafe {
+        let ptr = ffi::webui_decode(cstr.as_ptr());
+        if ptr.is_null() {
+            return String::new();
+        }
+        let result = CStr::from_ptr(ptr).to_string_lossy().into_owned();
+        ffi::webui_free(ptr as *mut c_void);
+        result
+    }
+}
+
+/// Get the HTTP MIME type string for a filename (e.g. `"foo.png"` → `"image/png"`).
+pub fn get_mime_type(filename: &str) -> String {
+    let cstr = CString::new(filename).unwrap_or_default();
+    unsafe {
+        let ptr = ffi::webui_get_mime_type(cstr.as_ptr());
+        if ptr.is_null() {
+            String::new()
+        } else {
+            CStr::from_ptr(ptr).to_string_lossy().into_owned()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Error handling
+// ---------------------------------------------------------------------------
+
+/// Get the last WebUI error code.
+pub fn last_error_number() -> usize {
+    unsafe { ffi::webui_get_last_error_number() }
+}
+
+/// Get the last WebUI error message as a `String`.
+pub fn last_error_message() -> String {
+    unsafe {
+        let ptr = ffi::webui_get_last_error_message();
+        if ptr.is_null() {
+            String::new()
+        } else {
+            CStr::from_ptr(ptr).to_string_lossy().into_owned()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TLS
+// ---------------------------------------------------------------------------
+
+/// Set the SSL/TLS certificate and private key (PEM format).
+/// Only has effect when using the `webui-2-secure-static` library build.
+/// Passing empty strings causes WebUI to generate a self-signed certificate.
+pub fn set_tls_certificate(cert_pem: &str, key_pem: &str) -> bool {
+    let cert = CString::new(cert_pem).unwrap_or_default();
+    let key = CString::new(key_pem).unwrap_or_default();
+    unsafe { ffi::webui_set_tls_certificate(cert.as_ptr(), key.as_ptr()) }
+}
+
+// ---------------------------------------------------------------------------
+// Custom logger
+// ---------------------------------------------------------------------------
+
+/// Install a custom log handler.
+///
+/// The `level` parameter maps to [`LoggerLevel`]; cast via `LoggerLevel::from(level)`.
+///
+/// ```no_run
+/// unsafe extern "C" fn my_log(level: usize, msg: *const i8, _data: *mut std::ffi::c_void) {
+///     use std::ffi::CStr;
+///     let s = CStr::from_ptr(msg).to_string_lossy();
+///     eprintln!("[webui level={}] {}", level, s);
+/// }
+/// // SAFETY: my_log is a valid function pointer; null user_data is explicitly supported.
+/// unsafe { webui_rs::set_logger(Some(my_log), std::ptr::null_mut()) };
+/// ```
+///
+/// # Safety
+/// `user_data` must remain valid for the lifetime of the logger. WebUI will
+/// pass it back to `func` on every log call without any lifetime tracking.
+pub unsafe fn set_logger(
+    func: Option<unsafe extern "C" fn(usize, *const i8, *mut c_void)>,
+    user_data: *mut c_void,
+) {
+    ffi::webui_set_logger(func, user_data)
 }

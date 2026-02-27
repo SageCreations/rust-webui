@@ -47,12 +47,12 @@ Examples are found in `examples/` and can be run with `cargo run --example <exam
 ## Usage
 
 ```rust
-use webui_rs::webui;
+use webui_rs;
 
-pub fn main() {
-  let win = webui::Window::new();
-  win.show("<html><body><h1>Hello, World!</h1></body></html>");
-  webui::wait();
+fn main() {
+    let my_window = webui_rs::Window::new();
+    my_window.show("<html><head><script src=\"webui.js\"></script></head> Hello World ! </html>");
+    webui_rs::wait();
 }
 ```
 
