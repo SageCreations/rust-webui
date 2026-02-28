@@ -111,7 +111,7 @@ impl Event {
     // -----------------------------------------------------------------------
 
     /// Number of arguments passed from JavaScript.
-    pub fn arg_count(&self) -> usize {
+    pub fn get_count(&self) -> usize {
         unsafe { ffi::webui_get_count(self.raw) }
     }
 
