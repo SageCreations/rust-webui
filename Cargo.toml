@@ -20,7 +20,7 @@ tls = []
 # nothing needed yet
 
 [build-dependencies]
-# nothing — build.rs uses only std
+cc = "1"
 
 [lib]
 name = "webui_rs"

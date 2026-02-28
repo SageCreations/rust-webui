@@ -1,0 +1,3 @@
+[submodule "webui-src"]
+	path = webui-src
+	url = https://github.com/webui-dev/webui
