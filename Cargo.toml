@@ -23,5 +23,5 @@ tls = []
 cc = "1"
 
 [lib]
-name = "webui_rs"
+name = "webui"
 crate-type = ["rlib"]
