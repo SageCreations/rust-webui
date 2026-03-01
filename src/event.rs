@@ -9,6 +9,8 @@ use std::time::Duration;
 use crate::ffi::{self, RawEvent};
 use crate::types::{EventType, ScriptError};
 
+use crate::window::Window;
+
 // ---------------------------------------------------------------------------
 // Event
 // ---------------------------------------------------------------------------
@@ -18,7 +20,7 @@ use crate::types::{EventType, ScriptError};
 /// All methods are safe — they validate pointers and handle string conversion.
 ///
 /// ```no_run
-/// use webui_rs::{Window, Event};
+/// use webui::{Window, Event};
 ///
 /// let win = Window::new();
 /// win.bind("myButton", |e: &Event| {
@@ -104,6 +106,10 @@ impl Event {
                 CStr::from_ptr(ptr).to_string_lossy().into_owned()
             }
         }
+    }
+
+    pub fn get_window(&self) -> Window {
+        Window::from_id(self.window_id())
     }
 
     // -----------------------------------------------------------------------

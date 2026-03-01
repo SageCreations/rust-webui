@@ -41,7 +41,7 @@ pub fn wait() {
 /// Useful when you need to run code on the main thread alongside the event loop:
 ///
 /// ```no_run
-/// while webui_rs::wait_async() {
+/// while webui::wait_async() {
 ///     // do work on the main thread here
 /// }
 /// ```
@@ -75,7 +75,7 @@ pub fn delete_all_profiles() {
 /// Should be called before any call to `show()`.
 ///
 /// ```no_run
-/// webui_rs::set_config(webui_rs::Config::ShowWaitConnection, false);
+/// webui::set_config(webui::Config::ShowWaitConnection, false);
 /// ```
 pub fn set_config(option: Config, status: bool) {
     unsafe { ffi::webui_set_config(option.into(), status) }
@@ -227,7 +227,7 @@ pub fn set_tls_certificate(cert_pem: &str, key_pem: &str) -> bool {
 ///     eprintln!("[webui level={}] {}", level, s);
 /// }
 /// // SAFETY: my_log is a valid function pointer; null user_data is explicitly supported.
-/// unsafe { webui_rs::set_logger(Some(my_log), std::ptr::null_mut()) };
+/// unsafe { webui::set_logger(Some(my_log), std::ptr::null_mut()) };
 /// ```
 ///
 /// # Safety

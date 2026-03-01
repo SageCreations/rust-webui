@@ -1,7 +1,7 @@
 // window.rs
 // The main `Window` type — a safe wrapper around a WebUI window handle.
 
-use std::ffi::{c_void, CString, c_char};
+use std::ffi::{c_char, c_void, CString};
 use std::time::Duration;
 
 use crate::ffi;
@@ -19,12 +19,12 @@ use crate::{callbacks, Event};
 /// [`crate::exit`] to close everything.
 ///
 /// ```no_run
-/// use webui_rs::{Window, Browser};
+/// use webui::{Window, Browser};
 ///
 /// let win = Window::new();
 /// win.show("<html><body><h1>Hello from Rust!</h1></body></html>");
-/// webui_rs::wait();
-/// webui_rs::clean();
+/// webui::wait();
+/// webui::clean();
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Window {
@@ -57,6 +57,14 @@ impl Window {
         unsafe { ffi::webui_get_new_window_id() }
     }
 
+    pub fn from_id(id: usize) -> Window {
+        Window { id }
+    }
+
+    pub fn get_id(&self) -> usize {
+        self.id
+    }
+
     // -----------------------------------------------------------------------
     // Binding / callbacks
     // -----------------------------------------------------------------------
@@ -69,7 +77,7 @@ impl Window {
     /// to arguments and lets you return values to JavaScript.
     ///
     /// ```no_run
-    /// win.bind("myButton", |e: &webui_rs::Event| {
+    /// win.bind("myButton", |e: &webui::Event| {
     ///     println!("Button clicked, arg = {}", e.get_string());
     ///     e.return_int(42);
     /// });
@@ -79,8 +87,9 @@ impl Window {
         F: Fn(&Event) + Send + Sync + 'static,
     {
         let cstr = CString::new(element).unwrap_or_default();
-        let bind_id =
-            unsafe { ffi::webui_interface_bind(self.id, cstr.as_ptr(), Some(callbacks::trampoline)) };
+        let bind_id = unsafe {
+            ffi::webui_interface_bind(self.id, cstr.as_ptr(), Some(callbacks::trampoline))
+        };
         callbacks::register(bind_id, callback);
         bind_id
     }
@@ -145,9 +154,7 @@ impl Window {
             if ptr.is_null() {
                 String::new()
             } else {
-                std::ffi::CStr::from_ptr(ptr)
-                    .to_string_lossy()
-                    .into_owned()
+                std::ffi::CStr::from_ptr(ptr).to_string_lossy().into_owned()
             }
         }
     }
@@ -286,9 +293,7 @@ impl Window {
             if ptr.is_null() {
                 String::new()
             } else {
-                std::ffi::CStr::from_ptr(ptr)
-                    .to_string_lossy()
-                    .into_owned()
+                std::ffi::CStr::from_ptr(ptr).to_string_lossy().into_owned()
             }
         }
     }

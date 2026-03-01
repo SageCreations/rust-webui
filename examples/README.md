@@ -8,7 +8,7 @@ The only requirement to build the examples is a Rust compiler.
 
 - `minimal`: Creates a minimal WebUI application.
 - `call_rust_from_js`: Calls Rust from JavaScript.
-- TODO: `call_js_from_rust`: Calls JavaScript from Rust.
+- `call_js_from_rust`: Calls JavaScript from Rust.
 - TODO: `serve_a_folder`: Use WebUI to serve a folder that contains `.html`, `.css`, `.js`, or `.ts` files.
 - TODO: `custom_web_server`: Use your preferred web server like NGINX/Apache... with WebUI to serve a folder.
 - TODO: `chatgpt_api`: Calls ChatGPT API from Rust.
