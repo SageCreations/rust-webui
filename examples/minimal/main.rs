@@ -1,4 +1,4 @@
-// examples/minimal.rs
+// examples/minimal/main.rs
 use webui;
 
 fn main() {

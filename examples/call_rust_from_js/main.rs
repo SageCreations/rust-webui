@@ -1,10 +1,9 @@
-// examples/call_rust_from_js.rs
+// examples/call_rust_from_js/main.rs
 use webui;
 
 fn my_function_string(e: &webui::Event) {
-    
-	// JavaScript:
-	// my_function_string('Hello', 'World`);
+    // JavaScript:
+    // my_function_string('Hello', 'World`);
 
     let str_1: String = e.get_string();
     let str_2: String = e.get_string_at(1);
@@ -14,12 +13,14 @@ fn my_function_string(e: &webui::Event) {
 }
 
 fn my_function_integer(e: &webui::Event) {
-    
     // Javascript:
     // my_function_integer(123, 456, 789, 12345.6789);
 
     let count: usize = e.get_count();
-    println!("my_function_integer: There is {} arguments in this event", count); // 4
+    println!(
+        "my_function_integer: There is {} arguments in this event",
+        count
+    ); // 4
 
     let number_1: i64 = e.get_int(); // Or e.get_int_at(0);
     let number_2: i64 = e.get_int_at(1);
@@ -35,44 +36,48 @@ fn my_function_integer(e: &webui::Event) {
 }
 
 fn my_function_boolean(e: &webui::Event) {
+    // JavaScript:
+    // my_function_boolean(true, false);
 
-	// JavaScript:
-	// my_function_boolean(true, false);
+    let status_1: bool = e.get_bool(); // Or e.get_bool_at(0);
+    let status_2: bool = e.get_bool_at(1);
 
-	let status_1: bool = e.get_bool(); // Or e.get_bool_at(0);
-	let status_2: bool = e.get_bool_at(1);
-
-	println!("my_function_boolean 1: {}", if status_1 { "True" } else { "False" }); // True
-	println!("my_function_boolean 2: {}", if status_2 { "True" } else { "False" }); // False
+    println!(
+        "my_function_boolean 1: {}",
+        if status_1 { "True" } else { "False" }
+    ); // True
+    println!(
+        "my_function_boolean 2: {}",
+        if status_2 { "True" } else { "False" }
+    ); // False
 }
 
 fn my_function_raw_binary(e: &webui::Event) {
+    // JavaScript:
+    // my_function_raw_binary(new Uint8Array([0x41]), new Uint8Array([0x42, 0x43]));
 
-	// JavaScript:
-	// my_function_raw_binary(new Uint8Array([0x41]), new Uint8Array([0x42, 0x43]));
+    let raw_1: String = e.get_string(); // Or e.get_string_at(0);
+    let raw_2: String = e.get_string_at(1);
 
-	let raw_1: String = e.get_string(); // Or e.get_string_at(0);
-	let raw_2: String = e.get_string_at(1);
-
-	let len_1: usize = e.get_size(); // Or e.get_size_at(0);
-	let len_2: usize = e.get_size_at(1);
+    let len_1: usize = e.get_size(); // Or e.get_size_at(0);
+    let len_2: usize = e.get_size_at(1);
 
     let raw_1 = raw_1.as_bytes();
     let raw_2 = raw_2.as_bytes();
 
-	// Print raw_1
-	print!("my_function_raw_binary 1 ({} bytes): ", len_1);
-	for byte in raw_1 {
-		print!("0x{:02x} ", byte);
+    // Print raw_1
+    print!("my_function_raw_binary 1 ({} bytes): ", len_1);
+    for byte in raw_1 {
+        print!("0x{:02x} ", byte);
     }
-	println!();
+    println!();
 
-	// Check raw_2 (Big)
-	// [0xA1, 0x00..., 0xA2]
-	let valid = raw_2.first() == Some(&0xA1) && raw_2.last() == Some(&0xA2);
+    // Check raw_2 (Big)
+    // [0xA1, 0x00..., 0xA2]
+    let valid = raw_2.first() == Some(&0xA1) && raw_2.last() == Some(&0xA2);
 
-	// Print raw_2
-	println!(
+    // Print raw_2
+    println!(
         "my_function_raw_binary 2 big ({} bytes): valid data? {}",
         len_2,
         if valid { "Yes" } else { "No" }
@@ -80,24 +85,25 @@ fn my_function_raw_binary(e: &webui::Event) {
 }
 
 fn my_function_with_response(e: &webui::Event) {
+    // JavaScript:
+    // my_function_with_response(number, 2).then(...)
 
-	// JavaScript:
-	// my_function_with_response(number, 2).then(...)
+    let number: i64 = e.get_int(); // Or e.get_int_at(0);
+    let times: i64 = e.get_int_at(1);
 
-	let number: i64 = e.get_int(); // Or e.get_int_at(0);
-	let times: i64 = e.get_int_at(1);
+    let res: i64 = number * times;
+    println!(
+        "my_function_with_response: {} * {} = {}",
+        number, times, res
+    );
 
-	let res: i64 = number * times;
-	println!("my_function_with_response: {} * {} = {}", number, times, res);
-
-	// Send back the response to JavaScript
-	e.return_int(res);
+    // Send back the response to JavaScript
+    e.return_int(res);
 }
 
 fn main() {
-
-	// HTML
-	let my_html = r#"
+    // HTML
+    let my_html = r#"
 	    <!DOCTYPE html>
 	    <html>
 	      <head>
@@ -122,7 +128,7 @@ fn main() {
 	            }
 	            button {
 	                background: #3498db;
-	                color: #fff; 
+	                color: #fff;
 	                cursor: pointer;
 	                font-size: 16px;
 	            }
@@ -140,7 +146,7 @@ fn main() {
 	        <br>
 	        <button onclick="my_function_boolean(true, false);">Call my_function_boolean()</button>
 	        <br>
-	        <button onclick="my_function_raw_binary(new Uint8Array([0x41,0x42,0x43]), big_arr);"> 
+	        <button onclick="my_function_raw_binary(new Uint8Array([0x41,0x42,0x43]), big_arr);">
 	         Call my_function_raw_binary()</button>
 	        <br>
 	        <p>Call a Rust function that returns a response</p>
@@ -163,22 +169,22 @@ fn main() {
 	    </html>
         "#;
 
-	// Create a window
-	let my_window = webui::Window::new();
+    // Create a window
+    let my_window = webui::Window::new();
 
-	// Bind HTML elements with C functions
-	my_window.bind("my_function_string", my_function_string);
-	my_window.bind("my_function_integer", my_function_integer);
-	my_window.bind("my_function_boolean", my_function_boolean);
-	my_window.bind("my_function_with_response", my_function_with_response);
-	my_window.bind("my_function_raw_binary", my_function_raw_binary);
+    // Bind HTML elements with C functions
+    my_window.bind("my_function_string", my_function_string);
+    my_window.bind("my_function_integer", my_function_integer);
+    my_window.bind("my_function_boolean", my_function_boolean);
+    my_window.bind("my_function_with_response", my_function_with_response);
+    my_window.bind("my_function_raw_binary", my_function_raw_binary);
 
-	// Show the window
-	my_window.show(my_html); // my_window.show_browser(my_html, webui::Browser::Chrome);
+    // Show the window
+    my_window.show(my_html); // my_window.show_browser(my_html, webui::Browser::Chrome);
 
-	// Wait until all windows get closed
-	webui::wait();
+    // Wait until all windows get closed
+    webui::wait();
 
-	// Free all memory resources (Optional)
-	webui::clean();
+    // Free all memory resources (Optional)
+    webui::clean();
 }

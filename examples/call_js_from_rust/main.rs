@@ -1,4 +1,4 @@
-// examples/call_js_from_rust.rs
+// examples/call_js_from_rust/main.rs
 use webui;
 
 fn my_function_exit(_e: &webui::Event) {

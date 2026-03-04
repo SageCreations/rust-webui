@@ -330,6 +330,73 @@ impl Window {
         unsafe { ffi::webui_set_root_folder(self.id, cstr.as_ptr()) }
     }
 
+    /// Register a Rust closure as the HTTP file handler for this window.
+    ///
+    /// The closure is called for **every** browser request before WebUI's own
+    /// file-serving logic runs. It receives the requested path (e.g.
+    /// `"/index.html"`, `"/assets/app.js"`) and must return:
+    ///
+    /// - `Some(bytes)` — a complete, raw HTTP response to send back.
+    ///   You are responsible for building the full response including the
+    ///   status line and headers, for example:
+    ///   ```text
+    ///   HTTP/1.1 200 OK\r\n
+    ///   Content-Type: text/html\r\n
+    ///   Content-Length: <n>\r\n
+    ///   \r\n
+    ///   <body bytes>
+    ///   ```
+    ///   The bytes are copied into WebUI-owned memory (`webui_malloc`) and
+    ///   freed by the C library after the response is sent.
+    ///
+    /// - `None` — fall through to WebUI's default file serving (root folder,
+    ///   filesystem lookup, etc.).
+    ///
+    /// Calling this method disables `ShowWaitConnection` automatically so that
+    /// `show()` does not block waiting for a WebSocket handshake that may never
+    /// come when you are serving content dynamically.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use webui::Window;
+    ///
+    /// let win = Window::new();
+    ///
+    /// win.set_file_handler(|path: &str| -> Option<Vec<u8>> {
+    ///     match path {
+    ///         "/" | "/index.html" => {
+    ///             let html = "<html><body><h1>Hello from Rust!</h1></body></html>";
+    ///             let response = format!(
+    ///                 "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\n\r\n{}",
+    ///                 html.len(),
+    ///                 html
+    ///             );
+    ///             Some(response.into_bytes())
+    ///         }
+    ///         _ => None, // let WebUI serve everything else from disk
+    ///     }
+    /// });
+    ///
+    /// win.show("index.html");
+    /// webui::wait();
+    /// ```
+    pub fn set_file_handler<F>(&self, handler: F)
+    where
+        F: Fn(&str) -> Option<Vec<u8>> + Send + Sync + 'static,
+    {
+        // Disable show_wait_connection so show() returns immediately.
+        // Without this, show() will block until a WebSocket connects, which
+        // may never happen in a pure file-handler workflow.
+        crate::set_config(crate::types::Config::ShowWaitConnection, false);
+
+        callbacks::register_file_handler(self.id, handler);
+
+        unsafe {
+            ffi::webui_set_file_handler_window(self.id, Some(callbacks::file_handler_trampoline))
+        }
+    }
+
     // -----------------------------------------------------------------------
     // JavaScript
     // -----------------------------------------------------------------------
