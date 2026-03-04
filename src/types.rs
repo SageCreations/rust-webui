@@ -2,7 +2,12 @@
 // Idiomatic Rust enums that map to the C integer constants.
 // These are what users of the library will actually touch.
 
-use crate::ffi::RawConfig;
+// Import the bindgen type alias and every config constant we need to map to.
+use crate::bindings::{
+    webui_config, webui_config_asynchronous_response, webui_config_folder_monitor,
+    webui_config_multi_client, webui_config_show_wait_connection, webui_config_ui_event_blocking,
+    webui_config_use_cookies,
+};
 
 // ---------------------------------------------------------------------------
 // Browser
@@ -118,15 +123,17 @@ pub enum Config {
     AsynchronousResponse,
 }
 
-impl From<Config> for RawConfig {
-    fn from(c: Config) -> RawConfig {
+/// Convert to the bindgen `webui_config` type (`c_uint` alias) using the
+/// named constants that bindgen generated from the C enum.
+impl From<Config> for webui_config {
+    fn from(c: Config) -> webui_config {
         match c {
-            Config::ShowWaitConnection => RawConfig::ShowWaitConnection,
-            Config::UiEventBlocking => RawConfig::UiEventBlocking,
-            Config::FolderMonitor => RawConfig::FolderMonitor,
-            Config::MultiClient => RawConfig::MultiClient,
-            Config::UseCookies => RawConfig::UseCookies,
-            Config::AsynchronousResponse => RawConfig::AsynchronousResponse,
+            Config::ShowWaitConnection => webui_config_show_wait_connection,
+            Config::UiEventBlocking => webui_config_ui_event_blocking,
+            Config::FolderMonitor => webui_config_folder_monitor,
+            Config::MultiClient => webui_config_multi_client,
+            Config::UseCookies => webui_config_use_cookies,
+            Config::AsynchronousResponse => webui_config_asynchronous_response,
         }
     }
 }

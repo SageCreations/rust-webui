@@ -7,15 +7,15 @@
 //   2. The closure is boxed and stored in REGISTRY keyed by `bind_id`.
 //   3. When C fires the callback it calls `trampoline(window, event_number,
 //      element, event_type, bind_id)`.
-//   4. The trampoline reconstructs a synthetic `RawEvent`, wraps it in a safe
-//      `Event`, looks up the closure by `bind_id`, and calls it.
+//   4. The trampoline reconstructs a synthetic `webui_event_t`, wraps it in a
+//      safe `Event`, looks up the closure by `bind_id`, and calls it.
 
 use std::collections::HashMap;
-use std::ffi::{c_char};
+use std::ffi::c_char;
 use std::sync::{Mutex, OnceLock};
 
+use crate::bindings::webui_event_t;
 use crate::event::Event;
-use crate::ffi::{RawEvent};
 
 // ---------------------------------------------------------------------------
 // Callback registry
@@ -59,22 +59,22 @@ pub(crate) unsafe extern "C" fn trampoline(
     event_number: usize,
     bind_id: usize,
 ) {
-    // Build a temporary RawEvent on the stack so Event can delegate back to
-    // the `webui_get_*` / `webui_return_*` / `webui_interface_*` APIs.
-    // The C library keeps all the real data in its own memory; the event
-    // struct fields that matter for the interface API are window/event_number.
-    let mut raw = RawEvent {
+    // Build a temporary webui_event_t on the stack so Event can delegate back
+    // to the `webui_get_*` / `webui_return_*` / `webui_interface_*` APIs.
+    // The C library keeps all the real data in its own memory; the fields that
+    // matter for the interface API are window/event_number.
+    let mut raw = webui_event_t {
         window,
         event_type,
         element,
         event_number,
         bind_id,
-        client_id: 0,       // populated by C before the callback; safe to leave 0
+        client_id: 0, // populated by C before the callback; safe to leave 0
         connection_id: 0,
         cookies: std::ptr::null_mut(),
     };
 
-    let event = Event::from_raw(&mut raw as *mut RawEvent);
+    let event = Event::from_raw(&mut raw as *mut webui_event_t);
 
     // Look up and call the closure — don't hold the lock while calling.
     let cb_opt = {
@@ -82,10 +82,6 @@ pub(crate) unsafe extern "C" fn trampoline(
             .lock()
             .expect("callback registry poisoned")
             .get(&bind_id)
-            // Clone the Arc-like smart pointer if we ever switch to Arc, but
-            // for now we call through the lock after immediately releasing it.
-            // We get a raw function pointer-style call by releasing the lock
-            // first and using a short-lived borrow trick below instead.
             .map(|_| bind_id) // just confirm it exists
     };
 
